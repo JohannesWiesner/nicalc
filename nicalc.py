@@ -25,15 +25,15 @@ def calculate_img_similarity(img_1,img_2,mask_img,similarity_type='cosine_simila
     img_2_data = apply_mask(img_2,mask_img).reshape(1,-1)
 
     if similarity_type == 'cosine_similarity':
-        (img_similarity) = cosine_similarity(img_1_data,img_2_data)
+        img_similarity = cosine_similarity(img_1_data,img_2_data)
     
     elif similarity_type == 'spearmanr':
-        (img_similarity) = spearmanr(img_1_data,img_2_data,axis=1)
+        img_similarity,_ = spearmanr(img_1_data,img_2_data,axis=1)
         
     if similarity_type == 'pearsonr':
         img_1_data = img_1_data.reshape(-1)
         img_2_data = img_2_data.reshape(-1)
-        (img_similarity) = pearsonr(img_1_data,img_2_data)
+        img_similarity,_ = pearsonr(img_1_data,img_2_data)
         
     return img_similarity
 
