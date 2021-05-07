@@ -19,52 +19,92 @@ from scipy.stats import spearmanr
 from scipy.stats import pearsonr
 from scipy.spatial.distance import pdist
 
-def calculate_img_similarity(img_1,img_2,mask_img,similarity_type='cosine_similarity'):
-                             
-    img_1_data = apply_mask(img_1,mask_img).reshape(1,-1)
-    img_2_data = apply_mask(img_2,mask_img).reshape(1,-1)
+def calculate_img_similarity(ref_img,src_img,mask_img,similarity_type='spearmanr'):
+    '''Calculate similarity / distance between to nifti-images.
+    
+    Parameters
+    ----------
+    ref_img : Niimg-like object, array_like
+        First nifti file or an array-like object.
+    src_img : Niimg-like object, array_like
+        Second nifti file or an array-like object.
+    mask_img : Niimg-like object or None
+        Mask image which will be applied to both input images. If None, both
+        ref_img and src_img must be provided as arrays (i.e. already masked nifti files).
+    similarity_type : str, optional
+        Can be 'spearmanr' for Spearman's rank correlation coefficient,  
+        'pearsonr' for Pearson correlation coefficient, or 'cosine_similarity' for
+        cosine similarity. Default='spearmanr'.
+    Returns
+    -------
+    img_similarity : float
+        The distance / similarity coefficient.
+
+    '''
+    
+    if mask_img:
+        ref_img_data = apply_mask(ref_img,mask_img).reshape(1,-1)
+        src_img_data = apply_mask(src_img,mask_img).reshape(1,-1)
+    else:
+        ref_img_data = ref_img.reshape(1,-1)
+        src_img_data = src_img.reshape(1,-1)
 
     if similarity_type == 'cosine_similarity':
-        img_similarity = cosine_similarity(img_1_data,img_2_data)
+        img_similarity = cosine_similarity(ref_img_data,src_img_data)
     
     elif similarity_type == 'spearmanr':
-        img_similarity,_ = spearmanr(img_1_data,img_2_data,axis=1)
+        img_similarity,_ = spearmanr(ref_img_data,src_img_data,axis=1)
         
     if similarity_type == 'pearsonr':
-        img_1_data = img_1_data.reshape(-1)
-        img_2_data = img_2_data.reshape(-1)
-        img_similarity,_ = pearsonr(img_1_data,img_2_data)
+        ref_img_data = ref_img_data.reshape(-1)
+        src_img_data = src_img_data.reshape(-1)
+        img_similarity,_ = pearsonr(ref_img_data,src_img_data)
         
     return img_similarity
 
-def get_similarity_matrix(img_dict,mask_img,similarity_type='cosine_similarity'):
+def get_similarity_matrix(img_dict,mask_img,similarity_type='spearmanr'):
+    '''Compute similarity / distance between multiple images
     
-    # get combinations of stat image names
-    img_names = img_dict.keys()
-    img_name_combos = [(first_key,second_key) for first_key,second_key in combinations(list(img_names),2)]
+    Parameters
+    ----------
+    img_dict : dict
+        dictionary with where keys are the names of the images and values
+        are either a nifti file or an array-like object.
+    mask_img : TYPE
+        Mask image which will be applied to images. If None, images must be 
+        provided as arrays (i.e. already masked nifti files).
+    similarity_type : TYPE, optional
+        Can be 'spearmanr' for Spearman's rank correlation coefficient,  
+        'pearsonr' for Pearson correlation coefficient, or 'cosine_similarity' for
+        cosine similarity. Default='spearmanr'.
+
+    Returns
+    -------
+    similarity_matrix : pd.DataFrame
+        Similarity matrix for all images.
+
+    '''
     
-    stat_imgs = list(img_dict.values())
-    img_combinations = combinations(stat_imgs,2)
-    img_similarities = [calculate_img_similarity(img_1,img_2,mask_img,similarity_type=similarity_type) for (img_1,img_2) in img_combinations]
+    # compute similarity between all images
+    imgs = list(img_dict.values())
+    img_similarities = [calculate_img_similarity(ref_img,src_img,mask_img,similarity_type=similarity_type) for (ref_img,src_img) in combinations(imgs,2)]
     
     # create empty data frame
     n_imgs = len(img_dict)
-    df = pd.DataFrame(np.zeros((n_imgs,n_imgs)))
+    similarity_matrix = pd.DataFrame(np.zeros((n_imgs,n_imgs)))
     
-    # FIXME: It would be more pretty to use reversed names in order
-    # to add the correlation 'triangle in the bottom left corner' but this
-    # somehow leads to a rotation of the y-labels when plotting.
-    # img_names_reversed = list(img_names)[::-1]
-    # df = df.reindex(img_names_reversed)
-    # df.columns = img_names_reversed
-    df = df.reindex(img_names)
-    df.columns = img_names
+    # get combinations of image names
+    img_names = img_dict.keys()
+    img_name_combos = [(ref_name,src_name) for ref_name,src_name in combinations(list(img_names),2)]
     
     # fill data frame with similarity values
-    for idx,combi in enumerate(img_name_combos):
-        df.loc[combi[0],combi[1]] = img_similarities[idx]
+    similarity_matrix = similarity_matrix.reindex(img_names)
+    similarity_matrix.columns = img_names
     
-    return df
+    for idx,combo in enumerate(img_name_combos):
+        similarity_matrix.loc[combo[0],combo[1]] = img_similarities[idx]
+    
+    return similarity_matrix
 
 def calculate_overlap(first_mask_img,second_mask_img,proportion_type='first'):
     
