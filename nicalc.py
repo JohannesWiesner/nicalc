@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from nilearn.image import math_img
+from nilearn.image import new_img_like
 from nilearn.image import resample_to_img
 from nilearn.masking import apply_mask
 
@@ -174,3 +175,20 @@ def calculate_mask_spread(mask_img):
         avg_distance = np.mean(pdist(voxel_coords))
     
     return avg_distance
+
+
+def project_on_atlas(atlas_img,projection_dict):
+    '''Project values from a dictionary that maps atlas indices to values onto
+    the image and return projection image'''
+
+    # get data from atlas and make sure that the atlas indices are integers
+    atlas_img_data = atlas_img.get_fdata()
+    
+    # map each idx-value combination on atlas data
+    atlas_img_data_projections = np.ndarray(atlas_img_data.shape)
+        
+    for key in projection_dict:
+        atlas_img_data_projections[atlas_img_data == key] = projection_dict[key]
+    
+    # return nifti-file
+    return new_img_like(atlas_img,atlas_img_data_projections)
