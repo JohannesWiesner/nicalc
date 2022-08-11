@@ -176,19 +176,39 @@ def calculate_mask_spread(mask_img):
     
     return avg_distance
 
-
 def project_on_atlas(atlas_img,projection_dict):
     '''Project values from a dictionary that maps atlas indices to values onto
-    the image and return projection image'''
+        the image and return projection image. The dictionary must not a
+        0-key
+    
 
+    Parameters
+    ----------
+    atlas_img : niimg-like object
+        An atlas image.
+    projection_dict : dict
+        A dictionary where the keys are the atlas regions and the values
+        are the values of those regions.
+
+    Returns
+    -------
+    niimg-like object
+        A niimg-like object with values mapped onto brain regions.
+
+    '''
+
+    # check if projection dictionary contains '0' as a key
+    if 0 in projection_dict.keys():
+        raise KeyError('Dictionary must not contain "0" key.')
+            
     # get data from atlas and make sure that the atlas indices are integers
-    atlas_img_data = atlas_img.get_fdata()
+    atlas_img_data = atlas_img.get_fdata().astype(int)
     
     # map each idx-value combination on atlas data
-    atlas_img_data_projections = np.ndarray(atlas_img_data.shape)
+    atlas_img_data_projections = np.zeros(atlas_img_data.shape)
         
     for key in projection_dict:
         atlas_img_data_projections[atlas_img_data == key] = projection_dict[key]
-    
+            
     # return nifti-file
     return new_img_like(atlas_img,atlas_img_data_projections)
