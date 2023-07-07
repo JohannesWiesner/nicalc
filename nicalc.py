@@ -179,7 +179,7 @@ def calculate_mask_spread(mask_img):
 def project_on_atlas(atlas_img,projection_dict):
     '''Project values from a dictionary that maps atlas indices to values onto
         the image and return projection image. The dictionary must not a
-        0-key
+        0-key. Will be deprecated in favor of map_on_atlas
     
 
     Parameters
@@ -212,3 +212,39 @@ def project_on_atlas(atlas_img,projection_dict):
             
     # return nifti-file
     return new_img_like(atlas_img,atlas_img_data_projections)
+
+def map_on_atlas(atlas_img,mapping_dict,background_label=0):
+    '''Map values onto atlas regions using a dictionary
+
+    Parameters
+    ----------
+    atlas_img : niimg-like object
+        An atlas image.
+    mapping_dict : dict
+        A dictionary that maps atlas region indices onto values for each
+        region. Must not contain the background label.
+    background_label : int or float, optional
+        Label used in atlas_img to represent background. Default=0.
+
+    Returns
+    -------
+    niimg-like object
+        A niimg-like object with values mapped onto brain regions.
+
+    '''
+
+    # mapping dict must not contain the background label as key
+    if background_label in mapping_dict.keys():
+        raise KeyError('Dictionary must not contain the background label as key')
+
+    # get data from atlas and make sure that the atlas indices are integers
+    atlas_img_data = atlas_img.get_fdata().astype(int)
+
+    # map each idx-value combination on atlas data
+    # use this approach: https://stackoverflow.com/a/16993364/8792159
+    atlas_img_data = atlas_img.get_fdata().astype(int)
+    u,inv = np.unique(atlas_img_data,return_inverse = True)
+    atlas_img_data_mapping = np.array([mapping_dict.get(x,x) for x in u])[inv].reshape(atlas_img_data.shape)
+
+    # return nifti-file
+    return new_img_like(atlas_img,atlas_img_data_mapping)
