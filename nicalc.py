@@ -242,9 +242,8 @@ def map_on_atlas(atlas_img,mapping_dict,background_label=0):
 
     # map each idx-value combination on atlas data
     # use this approach: https://stackoverflow.com/a/16993364/8792159
-    atlas_img_data = atlas_img.get_fdata().astype(int)
     u,inv = np.unique(atlas_img_data,return_inverse = True)
-    atlas_img_data_mapping = np.array([mapping_dict.get(x,x) for x in u])[inv].reshape(atlas_img_data.shape)
+    atlas_img_data_mapping = np.array([mapping_dict.get(x,background_label) for x in u])[inv].reshape(atlas_img_data.shape)
 
     # return nifti-file
     return new_img_like(atlas_img,atlas_img_data_mapping)
