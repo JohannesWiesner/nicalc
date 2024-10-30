@@ -213,23 +213,29 @@ def project_on_atlas(atlas_img,projection_dict):
     # return nifti-file
     return new_img_like(atlas_img,atlas_img_data_projections)
 
-def map_on_atlas(atlas_img,mapping_dict,background_label=0):
-    '''Map values onto atlas regions using a dictionary
+def map_on_atlas(atlas,mapping_dict,background_label=0):
+    '''Map values onto atlas regions using a dictionary. This function
+    works for both voxel-based an surface-based atlases. It will either
+    return a niimg-like object (voxel-based) or a numpy array (surface-based).
+    Atlas regions for which no idx-value mapping exists will be replaced
+    with the background label in the output iamge. This is useful if you
+    only want to show certain regions of interest.
 
     Parameters
     ----------
-    atlas_img : niimg-like object
-        An atlas image.
+    atlas : niimg-like object, or numpy.ndarray
+        An atlas image (voxel-based) or a numpy array with an atlas index for each
+        vertex of the corresponding surf mesh (surface-based)
     mapping_dict : dict
         A dictionary that maps atlas region indices onto values for each
         region. Must not contain the background label.
     background_label : int or float, optional
-        Label used in atlas_img to represent background. Default=0.
+        Label used in atlas to represent background. Default=0.
 
     Returns
     -------
-    niimg-like object
-        A niimg-like object with values mapped onto brain regions.
+    niimg-like object, or numpy.ndarry
+        A niimg-like object, or a numpy array with values mapped onto brain regions.
 
     '''
 
@@ -237,13 +243,30 @@ def map_on_atlas(atlas_img,mapping_dict,background_label=0):
     if background_label in mapping_dict.keys():
         raise KeyError('Dictionary must not contain the background label as key')
 
-    # get data from atlas and make sure that the atlas indices are integers
-    atlas_img_data = atlas_img.get_fdata().astype(int)
+    # check if user provided voxel data or surface data
+    try:
+        # if atlas is a path this will load the image for you (for convenience)
+        atlas = check_niimg_3d(atlas)
 
-    # map each idx-value combination on atlas data
-    # use this approach: https://stackoverflow.com/a/16993364/8792159
-    u,inv = np.unique(atlas_img_data,return_inverse = True)
-    atlas_img_data_mapping = np.array([mapping_dict.get(x,background_label) for x in u])[inv].reshape(atlas_img_data.shape)
+        # get data from atlas and make sure that the atlas indices are integers
+        atlas_data = atlas.get_fdata().astype(int)
 
-    # return nifti-file
-    return new_img_like(atlas_img,atlas_img_data_mapping)
+        # map each idx-value combination on atlas data
+        # use this approach: https://stackoverflow.com/a/16993364/8792159
+        u,inv = np.unique(atlas_data,return_inverse = True)
+        atlas_data_mapping = np.array([mapping_dict.get(x,background_label) for x in u])[inv].reshape(atlas_data.shape)
+
+        # return nifti-file
+        return new_img_like(atlas,atlas_data_mapping)
+
+    except TypeError:
+
+        atlas_data = atlas
+
+        # map each idx-value combination on atlas data
+        # use this approach: https://stackoverflow.com/a/16993364/8792159
+        u,inv = np.unique(atlas_data,return_inverse = True)
+        atlas_data_mapping = np.array([mapping_dict.get(x,background_label) for x in u])[inv].reshape(atlas_data.shape)
+
+        # return numpy array
+        return atlas_data_mapping
