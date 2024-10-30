@@ -13,6 +13,7 @@ from nilearn.image import math_img
 from nilearn.image import new_img_like
 from nilearn.image import resample_to_img
 from nilearn.masking import apply_mask
+from nilearn._utils.niimg_conversions import check_niimg_3d
 
 from itertools import combinations
 from sklearn.metrics.pairwise import cosine_similarity
